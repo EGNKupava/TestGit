@@ -8,32 +8,39 @@ import {
   LayerGroup,
   Circle,
   FeatureGroup,
-  Rectangle,
+  GeoJSON,
 } from "react-leaflet";
 
+import { oksCollection, zuCollection } from "../constatnts/geoJsonObjects";
 import "./map-component.css";
 
 export const MapComponent = () => {
   const basemapsDict = {
     osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    hot: "https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
-    cycle: "https://dev.{s}.tile.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png",
     bw: "https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png",
   };
 
   const [cords, setCords] = useState({
-    lat: 54.510741,
-    lng: 30.429586,
-    zoom: 10,
+    lat: 52.4279,
+    lng: 31.01492,
+    zoom: 15,
   });
 
   const center = [cords.lat, cords.lng];
 
-  const rectangle = [
-    [51.49, -0.08],
-    [51.5, -0.06],
-  ];
+  const oksStyle = (feature) => ({
+    color: "#555555",
+    weight: 2,
+    opacity: 0.8,
+    fillColor: "#932a2a",
+  });
+
+  const zuStyle = (feature) => ({
+    color: "#d31717",
+    weight: 2,
+    opacity: 0.5,
+    fillColor: "#4f7d50",
+  });
 
   return (
     <MapContainer
@@ -43,7 +50,7 @@ export const MapComponent = () => {
       className="map-container"
     >
       <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="OpenStreetMap.Mapnik">
+        <LayersControl.BaseLayer checked name="Ортофотоплан">
           <TileLayer
             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
             url={basemapsDict.osm}
@@ -55,6 +62,7 @@ export const MapComponent = () => {
             url={basemapsDict.bw}
           />
         </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="MyObjects"></LayersControl.BaseLayer>
         <LayersControl.Overlay name="Marker with popup">
           <Marker position={center}>
             <Popup>
@@ -62,7 +70,7 @@ export const MapComponent = () => {
             </Popup>
           </Marker>
         </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="Layer group with circles">
+        <LayersControl.Overlay name="Layer group with circles">
           <LayerGroup>
             <Circle
               center={center}
@@ -84,11 +92,22 @@ export const MapComponent = () => {
             </LayerGroup>
           </LayerGroup>
         </LayersControl.Overlay>
-        <LayersControl.Overlay name="Feature group">
-          <FeatureGroup pathOptions={{ color: "purple" }}>
-            <Popup>Popup in FeatureGroup</Popup>
-            <Circle center={[51.51, -0.06]} radius={200} />
-            <Rectangle bounds={rectangle} />
+        <LayersControl.Overlay checked name="Земельные участки">
+          <FeatureGroup>
+            {zuCollection.map((f) => (
+              <GeoJSON key={f.properties.id} data={f} style={zuStyle}>
+                <Popup>{f.properties.name}</Popup>
+              </GeoJSON>
+            ))}
+          </FeatureGroup>
+        </LayersControl.Overlay>
+        <LayersControl.Overlay checked name="ОКС">
+          <FeatureGroup>
+            {oksCollection.map((f) => (
+              <GeoJSON key={f.properties.id} data={f} style={oksStyle}>
+                <Popup>{f.properties.name}</Popup>
+              </GeoJSON>
+            ))}
           </FeatureGroup>
         </LayersControl.Overlay>
       </LayersControl>
