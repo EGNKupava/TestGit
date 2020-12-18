@@ -1,116 +1,118 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   MapContainer,
-  TileLayer,
-  Marker,
+  useMap,
+  GeoJSON,
   Popup,
   LayersControl,
-  LayerGroup,
-  Circle,
+  TileLayer,
   FeatureGroup,
-  GeoJSON,
 } from "react-leaflet";
-
-import { oksCollection, zuCollection } from "../constatnts/geoJsonObjects";
 import "./map-component.css";
 
-export const MapComponent = () => {
-  const basemapsDict = {
-    osm: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    bw: "https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png",
-  };
+import L from "leaflet";
 
-  const [cords, setCords] = useState({
-    lat: 52.4279,
-    lng: 31.01492,
-    zoom: 15,
-  });
+import { kpt } from "../constatnts/kpt";
+import proj4 from "proj4";
 
-  const center = [cords.lat, cords.lng];
+const center = [55.920420841522, 39.16531353929];
 
-  const oksStyle = (feature) => ({
-    color: "#555555",
-    weight: 2,
-    opacity: 0.8,
-    fillColor: "#932a2a",
-  });
-
-  const zuStyle = (feature) => ({
-    color: "#d31717",
-    weight: 2,
-    opacity: 0.5,
-    fillColor: "#4f7d50",
-  });
-
-  return (
-    <MapContainer
-      zoom={cords.zoom}
-      center={center}
-      scrollWheelZoom={false}
-      className="map-container"
-    >
-      <LayersControl position="topright">
-        <LayersControl.BaseLayer checked name="Ортофотоплан">
-          <TileLayer
-            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-            url={basemapsDict.osm}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="OpenStreetMap.BlackAndWhite">
-          <TileLayer
-            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-            url={basemapsDict.bw}
-          />
-        </LayersControl.BaseLayer>
-        <LayersControl.BaseLayer name="MyObjects"></LayersControl.BaseLayer>
-        <LayersControl.Overlay name="Marker with popup">
-          <Marker position={center}>
-            <Popup>
-              A pretty CSS3 popup. <br /> Easily customizable.
-            </Popup>
-          </Marker>
-        </LayersControl.Overlay>
-        <LayersControl.Overlay name="Layer group with circles">
-          <LayerGroup>
-            <Circle
-              center={center}
-              pathOptions={{ fillColor: "blue" }}
-              radius={200}
-            />
-            <Circle
-              center={center}
-              pathOptions={{ fillColor: "red" }}
-              radius={100}
-              stroke={false}
-            />
-            <LayerGroup>
-              <Circle
-                center={center}
-                pathOptions={{ color: "green", fillColor: "green" }}
-                radius={100}
-              />
-            </LayerGroup>
-          </LayerGroup>
-        </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="Земельные участки">
-          <FeatureGroup>
-            {zuCollection.map((f) => (
-              <GeoJSON key={f.properties.id} data={f} style={zuStyle}>
-                <Popup>{f.properties.name}</Popup>
-              </GeoJSON>
-            ))}
-          </FeatureGroup>
-        </LayersControl.Overlay>
-        <LayersControl.Overlay checked name="ОКС">
-          <FeatureGroup>
-            {oksCollection.map((f) => (
-              <GeoJSON key={f.properties.id} data={f} style={oksStyle}>
-                <Popup>{f.properties.name}</Popup>
-              </GeoJSON>
-            ))}
-          </FeatureGroup>
-        </LayersControl.Overlay>
-      </LayersControl>
-    </MapContainer>
-  );
+const corr = {
+  x: -120,
+  y: +12,
 };
+
+const convertCoord = (coord) =>
+  proj4(
+    `+proj=tmerc +ellps=krass +towgs84=24,-123,-94,0.02,-0.25,-0.13,1.1 +units=m +lon_0=39 +lat_0=0 +k_0=1 +x_0=${
+      134156.988 + corr.x
+    } +y_0=${-6032524.376 + corr.y}`,
+    "WGS84",
+    coord
+  );
+
+/* function polygonArea(Xs, Ys, numPoints) { //вычесление площади полигона
+  var area = 0;
+  var j = numPoints - 1;
+  for (var i = 0; i < numPoints; i++) {
+    area = area + (Xs[j] + Xs[i]) * (Ys[j] - Ys[i]);
+    j = i; //j is previous vertex to i
+  }
+  return Math.abs(area / 2);
+} */
+
+const convertFeatureCords = (featureObj) => {
+  const FetureContour = featureObj.geometry.coordinates.map((feature) => {
+    return feature.map((pointCord) => {
+      if (isFinite(pointCord[0]) && isFinite(pointCord[0])) {
+        return convertCoord(pointCord);
+      }
+      return [];
+    });
+  });
+  return {
+    ...featureObj,
+    geometry: {
+      ...featureObj.geometry,
+      coordinates: FetureContour,
+    },
+  };
+};
+
+const newKPT = kpt.map((item) =>
+  item.features.map((feature) => convertFeatureCords(feature))
+);
+
+const onFeature = (feature, layer) => {
+  layer.on({
+    mouseover: (event) => {
+      event.target.setStyle({
+        color: "orange",
+        fillColor: "yellow",
+        fillOpacity: "0.5",
+      });
+    },
+    mouseout: (event) => {
+      event.target.setStyle({
+        color: "red",
+        fillColor: "none",
+        fillOpacity: "0.5",
+      });
+    },
+  });
+};
+
+export const MapComponent = () => (
+  <MapContainer center={center} zoom={14}>
+    <LayersControl position="topright">
+      <LayersControl.BaseLayer checked name="Ортофотоплан">
+        <TileLayer
+          attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+        />
+      </LayersControl.BaseLayer>
+      <LayersControl.BaseLayer name="OpenStreetMap.BlackAndWhite">
+        <TileLayer
+          attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+      </LayersControl.BaseLayer>
+      {newKPT.map((item, index) => (
+        <LayersControl.Overlay
+          checked={index === 0 ? true : false}
+          name={`Район ${index + 1}`}
+        >
+          <GeoJSON
+            data={item}
+            style={{
+              fillColor: "none",
+              color: `rgb(${255 - index * 10},${index * 10},0`,
+              weight: 1,
+            }}
+            onEachFeature={onFeature}
+          />
+        </LayersControl.Overlay>
+      ))}
+    </LayersControl>
+  </MapContainer>
+);
