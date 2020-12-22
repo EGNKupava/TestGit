@@ -1,14 +1,17 @@
 import React from "react";
 import {
-  MapContainer,
-  useMap,
+  Map,
   GeoJSON,
   Popup,
   LayersControl,
   TileLayer,
   FeatureGroup,
 } from "react-leaflet";
+
+import { EditControl } from "react-leaflet-draw";
+
 import "./map-component.css";
+import "../../../node_modules/leaflet-draw/dist/leaflet.draw.css";
 
 import L from "leaflet";
 
@@ -28,6 +31,15 @@ const convertCoord = (coord) =>
       134156.988 + corr.x
     } +y_0=${-6032524.376 + corr.y}`,
     "WGS84",
+    coord
+  );
+
+const convertCoordWgsMsk = (coord) =>
+  proj4(
+    "WGS84",
+    `+proj=tmerc +ellps=krass +towgs84=24,-123,-94,0.02,-0.25,-0.13,1.1 +units=m +lon_0=39 +lat_0=0 +k_0=1 +x_0=${
+      134156.988 + corr.x
+    } +y_0=${-6032524.376 + corr.y}`,
     coord
   );
 
@@ -64,7 +76,17 @@ const newKPT = kpt.map((item) =>
 );
 
 const onFeature = (feature, layer) => {
+  const popupText =
+    feature.properties && feature.properties.cadastreNumber
+      ? feature.properties.cadastreNumber
+      : "Не известно";
+
+  layer.bindPopup(popupText);
   layer.on({
+    click: (event) => {
+      console.log(event);
+      console.log(feature);
+    },
     mouseover: (event) => {
       event.target.setStyle({
         color: "orange",
@@ -82,8 +104,28 @@ const onFeature = (feature, layer) => {
   });
 };
 
+const onPolygonCreaterd = (e) => {
+  const mskCords = e.layer._latlngs[0].map(({ lat, lng }) => {
+    console.log([lat, lng]);
+    convertCoordWgsMsk([lat, lng]);
+  });
+  console.log("WGS: ", e.layer._latlngs[0]);
+  /*console.log("mskCords: ", mskCords);*/
+};
+
+const DRAW_OPTIONS = {
+  rectangle: false,
+  marker: false,
+  circle: false,
+  polyline: false,
+  circlemarker: false,
+  polygon: {
+    showLength: true,
+  },
+};
+
 export const MapComponent = () => (
-  <MapContainer center={center} zoom={14}>
+  <Map center={center} zoom={14}>
     <LayersControl position="topright">
       <LayersControl.BaseLayer checked name="Ортофотоплан">
         <TileLayer
@@ -91,7 +133,7 @@ export const MapComponent = () => (
           url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         />
       </LayersControl.BaseLayer>
-      <LayersControl.BaseLayer name="OpenStreetMap.BlackAndWhite">
+      <LayersControl.BaseLayer name="OpenStreetMap">
         <TileLayer
           attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -106,13 +148,21 @@ export const MapComponent = () => (
             data={item}
             style={{
               fillColor: "none",
-              color: `rgb(${255 - index * 10},${index * 10},0`,
+              color: `rgb(${255 - index * 5},0,0`,
               weight: 1,
             }}
             onEachFeature={onFeature}
           />
         </LayersControl.Overlay>
       ))}
+      <LayersControl.Overlay checked name={`MAP MAP`}></LayersControl.Overlay>
     </LayersControl>
-  </MapContainer>
+    <FeatureGroup>
+      <EditControl
+        position="bottomright"
+        onCreated={onPolygonCreaterd}
+        draw={DRAW_OPTIONS}
+      />
+    </FeatureGroup>
+  </Map>
 );
