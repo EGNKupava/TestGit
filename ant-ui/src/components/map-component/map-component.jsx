@@ -33,14 +33,19 @@ const convertCoord = (coord) =>
     coord
   );
 
-const convertCoordWgsMsk = (coord) =>
-  proj4(
+const convertCoordWgsMsk = (coord) => {
+  const cordsMsk = proj4(
     "WGS84",
     `+proj=tmerc +ellps=krass +towgs84=24,-123,-94,0.02,-0.25,-0.13,1.1 +units=m +lon_0=39 +lat_0=0 +k_0=1 +x_0=${
       134156.988 + corr.x
     } +y_0=${-6032524.376 + corr.y}`,
     coord
   );
+  return [
+    Math.floor(cordsMsk[0] * 1000) / 1000,
+    Math.floor(cordsMsk[1] * 1000) / 1000,
+  ];
+};
 
 const convertFeatureCords = (featureObj) => {
   const FetureContour = featureObj.geometry.coordinates.map((feature) => {
@@ -92,10 +97,10 @@ const onFeature = (feature, layer) => {
 const DrawPanel = () => {
   const map = useMapEvents({
     "pm:create": (e) => {
-      console.log(e);
       const mskCords = e.layer._latlngs[0].map(({ lat, lng }) => {
         return convertCoordWgsMsk([lng, lat]);
       });
+      console.log(e);
       console.log(mskCords);
     },
     "pm:drawstart": (e) => {
