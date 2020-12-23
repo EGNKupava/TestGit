@@ -1,19 +1,18 @@
 import React from "react";
 import {
-  Map,
-  GeoJSON,
-  Popup,
-  LayersControl,
+  MapContainer,
   TileLayer,
-  FeatureGroup,
+  useMap,
+  LayersControl,
+  GeoJSON,
+  useMapEvents,
 } from "react-leaflet";
 
-import { EditControl } from "react-leaflet-draw";
-
 import "./map-component.css";
-import "../../../node_modules/leaflet-draw/dist/leaflet.draw.css";
+import "leaflet/dist/leaflet.css";
 
-import L from "leaflet";
+import "@geoman-io/leaflet-geoman-free";
+import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
 
 import { kpt } from "../constatnts/kpt";
 import proj4 from "proj4";
@@ -42,16 +41,6 @@ const convertCoordWgsMsk = (coord) =>
     } +y_0=${-6032524.376 + corr.y}`,
     coord
   );
-
-/* function polygonArea(Xs, Ys, numPoints) { //вычесление площади полигона
-  var area = 0;
-  var j = numPoints - 1;
-  for (var i = 0; i < numPoints; i++) {
-    area = area + (Xs[j] + Xs[i]) * (Ys[j] - Ys[i]);
-    j = i; //j is previous vertex to i
-  }
-  return Math.abs(area / 2);
-} */
 
 const convertFeatureCords = (featureObj) => {
   const FetureContour = featureObj.geometry.coordinates.map((feature) => {
@@ -83,10 +72,6 @@ const onFeature = (feature, layer) => {
 
   layer.bindPopup(popupText);
   layer.on({
-    click: (event) => {
-      console.log(event);
-      console.log(feature);
-    },
     mouseover: (event) => {
       event.target.setStyle({
         color: "orange",
@@ -104,87 +89,75 @@ const onFeature = (feature, layer) => {
   });
 };
 
-const onPolygonCreaterd = (e) => {
-  console.log(e.layerType);
-  const mskCords = e.layer._latlngs[0].map(({ lat, lng }) => {
-    console.log([lat, lng]);
-    return convertCoordWgsMsk([lng, lat]);
+const DrawPanel = () => {
+  const map = useMapEvents({
+    "pm:create": (e) => {
+      console.log(e);
+      const mskCords = e.layer._latlngs[0].map(({ lat, lng }) => {
+        return convertCoordWgsMsk([lng, lat]);
+      });
+      console.log(mskCords);
+    },
+    "pm:drawstart": (e) => {
+      console.log(e);
+    },
+    "pm:edit": (e) => {
+      console.log(e);
+    },
   });
-  console.log("mskCords: ", mskCords);
+  map.pm.addControls({
+    position: "topleft",
+    drawCircle: false,
+    drawRectangle: false,
+    drawMarker: false,
+    drawCircleMarker: false,
+  });
+
+  map.pm.enableDraw("Polygon", {
+    snappable: true,
+    snapDistance: 10,
+  });
+
+  map.pm.setLang("ru");
+
+  return null;
 };
 
-var MyCustomMarker = L.Icon.extend({
-  options: {
-    shadowUrl: null,
-    iconAnchor: new L.Point(12, 12),
-    iconSize: new L.Point(24, 24),
-    iconUrl: "link/to/image.png",
-  },
-});
-
-const DRAW_OPTIONS = {
-  rectangle: false,
-  marker: false,
-  circle: false,
-  polyline: false,
-  circlemarker: false,
-  polygon: {
-    icon: new L.DivIcon({
-      iconSize: new L.Point(10, 10),
-      className: "leaflet-div-icon leaflet-editing-icon my-own-icon",
-    }),
-    showLength: true,
-    shapeOptions: {
-      color: "#0000FF",
-      weight: 2,
-    },
-    allowIntersection: false,
-    drawError: {
-      color: "orange",
-      timeout: 1000,
-    },
-  },
-};
-
-export const MapComponent = () => (
-  <Map center={center} zoom={14}>
-    <LayersControl position="topright">
-      <LayersControl.BaseLayer checked name="Ортофотоплан">
-        <TileLayer
-          attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        />
-      </LayersControl.BaseLayer>
-      <LayersControl.BaseLayer name="OpenStreetMap">
-        <TileLayer
-          attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-      </LayersControl.BaseLayer>
-      {newKPT.map((item, index) => (
-        <LayersControl.Overlay
-          checked={index === 0 ? true : false}
-          name={`Район ${index + 1}`}
-        >
-          <GeoJSON
-            data={item}
-            style={{
-              fillColor: "none",
-              color: `rgb(${255 - index * 5},0,0`,
-              weight: 1,
-            }}
-            onEachFeature={onFeature}
+export const MapComponent = () => {
+  return (
+    <MapContainer center={center} zoom={15} className="map">
+      <LayersControl position="topright">
+        <LayersControl.BaseLayer checked name="Ортофотоплан">
+          <TileLayer
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
           />
-        </LayersControl.Overlay>
-      ))}
-      <LayersControl.Overlay checked name={`MAP MAP`}></LayersControl.Overlay>
-    </LayersControl>
-    <FeatureGroup>
-      <EditControl
-        position="bottomright"
-        onCreated={onPolygonCreaterd}
-        draw={DRAW_OPTIONS}
-      />
-    </FeatureGroup>
-  </Map>
-);
+        </LayersControl.BaseLayer>
+        <LayersControl.BaseLayer name="OpenStreetMap">
+          <TileLayer
+            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        </LayersControl.BaseLayer>
+        {newKPT.map((item, index) => (
+          <LayersControl.Overlay
+            checked={index === 0 ? true : false}
+            name={`Район ${index + 1}`}
+          >
+            <GeoJSON
+              data={item}
+              style={{
+                fillColor: "none",
+                color: `rgb(${255 - index * 5},0,0`,
+                weight: 1,
+              }}
+              onEachFeature={onFeature}
+            />
+          </LayersControl.Overlay>
+        ))}
+        <LayersControl.Overlay checked name={`MAP MAP`}></LayersControl.Overlay>
+      </LayersControl>
+      <DrawPanel />
+    </MapContainer>
+  );
+};
