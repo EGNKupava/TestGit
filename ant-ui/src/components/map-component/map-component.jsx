@@ -77,8 +77,8 @@ const newKPT = kpt.map((item) =>
 
 const onFeature = (feature, layer) => {
   const popupText =
-    feature.properties && feature.properties.cadastreNumber
-      ? feature.properties.cadastreNumber
+    feature.properties && feature.properties["Кадастровый номер"]
+      ? feature.properties["Кадастровый номер"]
       : "Не известно";
 
   layer.bindPopup(popupText);
@@ -105,13 +105,22 @@ const onFeature = (feature, layer) => {
 };
 
 const onPolygonCreaterd = (e) => {
+  console.log(e.layerType);
   const mskCords = e.layer._latlngs[0].map(({ lat, lng }) => {
     console.log([lat, lng]);
-    convertCoordWgsMsk([lat, lng]);
+    return convertCoordWgsMsk([lng, lat]);
   });
-  console.log("WGS: ", e.layer._latlngs[0]);
-  /*console.log("mskCords: ", mskCords);*/
+  console.log("mskCords: ", mskCords);
 };
+
+var MyCustomMarker = L.Icon.extend({
+  options: {
+    shadowUrl: null,
+    iconAnchor: new L.Point(12, 12),
+    iconSize: new L.Point(24, 24),
+    iconUrl: "link/to/image.png",
+  },
+});
 
 const DRAW_OPTIONS = {
   rectangle: false,
@@ -120,7 +129,20 @@ const DRAW_OPTIONS = {
   polyline: false,
   circlemarker: false,
   polygon: {
+    icon: new L.DivIcon({
+      iconSize: new L.Point(10, 10),
+      className: "leaflet-div-icon leaflet-editing-icon my-own-icon",
+    }),
     showLength: true,
+    shapeOptions: {
+      color: "#0000FF",
+      weight: 2,
+    },
+    allowIntersection: false,
+    drawError: {
+      color: "orange",
+      timeout: 1000,
+    },
   },
 };
 
