@@ -83,10 +83,6 @@ export const MapComponent = () => {
     setDrawPanelVisible(!isDrawPanelVisible);
   };
 
-  useEffect(() => {
-    console.log("renderrr");
-  }, [isDrawPanelVisible]);
-
   return (
     <div>
       <button type="button" onClick={toggleDrawPanel}>
