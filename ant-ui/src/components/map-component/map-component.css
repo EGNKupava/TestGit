@@ -1,5 +1,4 @@
 .map {
-  width: calc(100vw - 18px);
-  height: calc(100vh - 18px);
-  border: 1px solid black;
+  width: 100vw;
+  height: 95vh;
 }
